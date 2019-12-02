@@ -87,7 +87,8 @@ function main2()
         total_fuel = sum(calculate_fuel_required2, lines)
     end
     println("Part 2 Answer:")
-    @show Int(total_fuel)end
+    @show Int(total_fuel)
+end
 
 main1()
 main2()
