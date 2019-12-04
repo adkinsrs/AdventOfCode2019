@@ -23,17 +23,14 @@ function calc_num_steps(coords1, coords2, x, y, ind1, ind2)
     # 'x' and 'y' are the coordinates of the intersection found
     # ind1 is the last coord-1 position index before the intersection
     # ind2 is the same index for coord-2 array
-    """
+    if ind1==5 && ind2==4
     @show x
     @show y
-    @show ind1
-    @show ind2
+    @show coords1[ind1-1]
+    @show coords2[ind2-1]
     @show coords1[ind1]
     @show coords2[ind2]
-    @show coords1[ind1+1]
-    @show coords2[ind2+1]
-    @show ""
-    """
+    end
 
     total_x = coords1[1].x
     total_y = coords1[1].y
@@ -69,7 +66,6 @@ function calc_num_steps(coords1, coords2, x, y, ind1, ind2)
     total_v += abs(y - coords2[ind2].y)
 
     total_steps = total_u + total_v + total_x + total_y
-    @show total_steps
     return total_steps
 end
 
@@ -86,8 +82,6 @@ function create_coordinates_from_directions(directions)
             push!(coords, move_right(coords[end], dir))
         end
     end
-    # Pop off the original (0,0) coordinate so it does not create errors
-    popfirst!(coords)
     return coords
 end
 
