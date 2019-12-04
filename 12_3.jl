@@ -23,14 +23,6 @@ function calc_num_steps(coords1, coords2, x, y, ind1, ind2)
     # 'x' and 'y' are the coordinates of the intersection found
     # ind1 is the last coord-1 position index before the intersection
     # ind2 is the same index for coord-2 array
-    if ind1==5 && ind2==4
-    @show x
-    @show y
-    @show coords1[ind1-1]
-    @show coords2[ind2-1]
-    @show coords1[ind1]
-    @show coords2[ind2]
-    end
 
     total_x = coords1[1].x
     total_y = coords1[1].y
