@@ -7,6 +7,7 @@ Instead of I will just link to the puzzle's URL, like so:
 https://adventofcode.com/2019/day/3
 """
 
+# In hindsight, instead of storing points as NamedTuples I could have just created a Point type, which would have made array declarations a lot easier
 function calc_manhattan_distance(point)
     origin_x = 0
     origin_y = 0
