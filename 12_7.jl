@@ -41,8 +41,8 @@ function normalize_modes!(modes, window)
     end
 end
 
-function process_intcode(amp::Amplifier)
-    return process_intcode(amp.positions, amp.inputs, amp.curr_idx)
+function process_intcode(amp::Amplifier; save4=false)
+    return process_intcode(amp.positions, amp.inputs, amp.curr_idx; save4=save4)
 end
 
 function process_intcode(positions, inputs, curr_idx=1; save4=false)
@@ -84,8 +84,9 @@ function process_intcode(positions, inputs, curr_idx=1; save4=false)
             normalize_modes!(modes, window)
             stored_value = resolve_opcode_4(positions, window, modes)
             curr_idx += 2
+            # "save4" indicates to return values from opcode 4 instead of opcode 99
             if save4
-                return stored_value
+                return stored_value, curr_idx
             end
             push!(inputs, stored_value)
         elseif opcode == 5
@@ -123,8 +124,9 @@ function process_intcode(positions, inputs, curr_idx=1; save4=false)
             resolve_opcode_8(positions, window, modes)
             curr_idx += 4
         elseif opcode == 99
+            # "save4" indicates to return values from opcode 4 instead of opcode 99
             if save4
-                return "done"
+                return "done", curr_idx
             end
             return popfirst!(inputs)
         end
@@ -173,7 +175,6 @@ end
 
 function resolve_opcode_8(positions, window, modes)
     values = determine_values(positions, window, modes)
-    @show (window, values)
     positions[window[3]+1] = (values[1] == values[2] ? 1 : 0)
 end
 
@@ -207,13 +208,55 @@ function main1()
         max_output_signal = max(max_output_signal, stored_value)
     end
 
-    # In case we never have opcode 99
     println("Part 1 Answer:")
     @show max_output_signal
 end
 
 function main2()
-    nothing
+   input_file = joinpath(pwd(), "files", "12_7_input.txt")
+    input = read(open(input_file, "r"), String)
+    intcode = chomp(input)
+
+    # TEST code
+    #intcode = "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5"
+    # END test code
+
+    str_positions = split(intcode, ",")
+    positions = map(x -> parse(Int, x), str_positions)
+    orig_positions = copy(positions)
+
+    INITIAL_INPUT = 0
+    max_output_signal = 0
+
+    phase_signals = 5:9
+
+    # For each permutation of phase signals, create an amplifier system
+    # Pass output from previous amp to next amp and output signal value at end
+    for phase_perm in permutations(phase_signals)
+        stored_value = INITIAL_INPUT
+        amps = [Amplifier(copy(orig_positions), sig) for sig in phase_perm]
+        final_amp = amps[end]
+        for amp in Iterators.cycle(amps)
+            push!(amp.inputs, stored_value)
+            # Keep last stored value when we hit "done"
+            last_stored = stored_value
+            (stored_value, curr_idx) = process_intcode(amp; save4=true)
+            # If opcode 99, get input from final amp and go to next permutation
+            if stored_value == "done"
+                # The last stored value will be passed to the final amp
+                stored_value = last_stored
+                break
+            end
+            # Update this particular amplifier
+            # amp.positions is updated in 'process_intcode' by reference
+            
+            amp.curr_idx = curr_idx
+        end
+        max_output_signal = max(max_output_signal, stored_value)
+    end
+
+    println("Part 2 Answer:")
+    @show max_output_signal
 end
 
 # What is the highest signal that can be sent to the thrusters?
