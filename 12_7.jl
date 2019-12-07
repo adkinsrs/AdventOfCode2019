@@ -9,7 +9,14 @@ https://adventofcode.com/2019/day/7
 
 using Combinatorics
 
+mutable struct Amplifier
+    positions::Array{Int}
+    phase::Int
+    curr_idx::Int
+    inputs::Array{Int}
+end
 
+Amplifier(positions::Array{Int}, phase::Int) = Amplifier(positions, phase, 1, Int[phase])
 
 POSITION_MODE = 0   # Parameter is a memory address
 IMMEDIATE_MODE = 1  # Parameters is the value itself
@@ -32,6 +39,10 @@ function normalize_modes!(modes, window)
     while length(modes) < length(window)
         push!(modes, POSITION_MODE)
     end
+end
+
+function process_intcode(amp::Amplifier)
+    return process_intcode(amp.positions, amp.inputs, amp.curr_idx)
 end
 
 function process_intcode(positions, inputs, curr_idx=1; save4=false)
@@ -75,6 +86,7 @@ function process_intcode(positions, inputs, curr_idx=1; save4=false)
             curr_idx += 2
             if save4
                 return stored_value
+            end
             push!(inputs, stored_value)
         elseif opcode == 5
             try
@@ -114,9 +126,10 @@ function process_intcode(positions, inputs, curr_idx=1; save4=false)
             if save4
                 return "done"
             end
-            return stored_value
+            return popfirst!(inputs)
         end
     end
+end
 
 function resolve_opcode_1!(positions, window, modes)
     values = determine_values(positions, window, modes)
@@ -175,18 +188,28 @@ function main1()
 
     str_positions = split(intcode, ",")
     positions = map(x -> parse(Int, x), str_positions)
+    orig_positions = copy(positions)
 
-    
     INITIAL_INPUT = 0
-    stored_value = INITIAL_INPUT
     max_output_signal = 0
 
-    stored_value = process_intcode(positions, inputs)
-    max_output_signal = max(max_output_signal, stored_value)
+    phase_signals = 0:4
+
+    # For each permutation of phase signals, create an amplifier system
+    # Pass output from previous amp to next amp and output signal value at end
+    for phase_perm in permutations(phase_signals)
+        stored_value = INITIAL_INPUT
+        amps = [Amplifier(orig_positions, sig) for sig in phase_perm]
+        for amp in amps
+            push!(amp.inputs, stored_value)
+            stored_value = process_intcode(amp)
+        end
+        max_output_signal = max(max_output_signal, stored_value)
+    end
 
     # In case we never have opcode 99
-    println("Part 1 Answer (should not have gotten here):")
-    @show positions[1]
+    println("Part 1 Answer:")
+    @show max_output_signal
 end
 
 function main2()
