@@ -13,9 +13,11 @@ function determine_values(positions, window, modes, relative_base)
     values = Int[]
     for i in 1:length(window)
         if modes[i] == POSITION_MODE
+            grow_memory!(positions, window[i]+1)
             push!(values, positions[window[i]+1])
         elseif modes[i] == RELATIVE_MODE
             relative_position = window[i] + relative_base
+            grow_memory!(positions, relative_position+1)
             push!(values, positions[relative_position+1])
         else
             # Immediate mode pushes value directly
@@ -25,6 +27,24 @@ function determine_values(positions, window, modes, relative_base)
     return values
 end
 
+function determine_write_position(index, mode, relative_base)
+    """Determine index to write to, between position mode and relative mode."""
+    if mode == RELATIVE_MODE
+        return index + relative_base
+    end
+    return index
+end
+
+function grow_memory!(positions, index)
+    """If current index is out of bounds, grow memory addresses."""
+    if index > length(positions)
+        num_to_grow  = index - length(positions)
+        for i in 1:num_to_grow
+            push!(positions, zero(Int))
+        end
+    end
+end
+
 function normalize_modes!(modes, window)
     """If modes array is smaller than the windows, add the implied 0 modes."""
     while length(modes) < length(window)
@@ -32,7 +52,7 @@ function normalize_modes!(modes, window)
     end
 end
 
-function process_intcode(positions, inputs, curr_idx=1; save4=false)
+function process_intcode(positions, input, curr_idx=1)
     """Loop through intcode instructions, resolving any opcodes encountered."""
     #TODO: eventually use the OffsetArrays package to 0-index the positions array to be accurate with
     # memory address positions read in from the intcode
@@ -64,18 +84,12 @@ function process_intcode(positions, inputs, curr_idx=1; save4=false)
             curr_idx += 4
         elseif opcode == 3
             window = positions[curr_idx+1]
-            stored_value = popfirst!(inputs)
-            opcode_3!(positions, window, modes, relative_base, stored_value)
+            opcode_3!(positions, window, modes, relative_base, input)
             curr_idx += 2
         elseif opcode == 4
             window = positions[curr_idx+1]
-            stored_value = opcode_4(positions, window, modes, relative_base)
+            input = opcode_4(positions, window, modes, relative_base)
             curr_idx += 2
-            # "save4" indicates to return values from opcode 4 instead of opcode 99
-            if save4
-                return stored_value, curr_idx
-            end
-            push!(inputs, stored_value)
         elseif opcode == 5
             try
                 window = positions[curr_idx+1:curr_idx+2]
@@ -107,15 +121,16 @@ function process_intcode(positions, inputs, curr_idx=1; save4=false)
             opcode_8(positions, window, modes, relative_base)
             curr_idx += 4
         elseif opcode == 9
-            window = positions[curr_idx+1]
+            try
+                window = positions[curr_idx+1]
+            catch BoundsError
+                error("Whoops! Program went to far.  Opcode 9 should not be this close to the end.")
+            end
             relative_base = opcode_9(positions, window, modes, relative_base)
             curr_idx += 2
         elseif opcode == 99
-            # "save4" indicates to return values from opcode 4 instead of opcode 99
-            if save4
-                return "done", curr_idx
-            end
-            return popfirst!(inputs)
+            return input
+            #return opcode_99(positions)
         end
     end
 end
@@ -123,22 +138,28 @@ end
 function opcode_1!(positions, window, modes, relative_base)
     """Add first two parameters, write result to third."""
     values = determine_values(positions, window, modes, relative_base)
+    write_index = determine_write_position(window[3], modes[3], relative_base)
     # Windows 2, 3, and 4 are memory address positions
     total = values[1] + values[2]
-    positions[window[3]+1] = total
+    grow_memory!(positions, write_index+1)
+    positions[write_index+1] = total
 end
 
 function opcode_2!(positions, window, modes, relative_base)
     """Multiply first two parameters, write result to third."""
     values = determine_values(positions, window, modes, relative_base)
+    write_index = determine_write_position(window[3], modes[3], relative_base)
     total = values[1] * values[2]
-    positions[window[3]+1] = total
+    grow_memory!(positions, write_index+1)
+    positions[write_index+1] = total
 end
 
 function opcode_3!(positions, window, modes, relative_base, input)
     """Write input parameter to first intcode parameter read."""
     # parameters that write to a position will never be in "immediate mode"
-    positions[window[1]+1] = input
+    write_index = determine_write_position(window[1], modes[1], relative_base)
+    grow_memory!(positions, write_index+1)
+    positions[write_index+1] = input
 end
 
 function opcode_4(positions, window, modes, relative_base)
@@ -162,19 +183,24 @@ function opcode_6(positions, window, modes, relative_base, idx)
 end
 
 function opcode_7(positions, window, modes, relative_base)
-    """Write 1 if first parameter is less than second, otherwise write zero."""
+    """Write 1 to third parameter if first parameter is less than second, otherwise write zero."""
     values = determine_values(positions, window, modes, relative_base)
-    positions[window[3]+1] = (values[1] < values[2] ? 1 : 0)
+    write_index = determine_write_position(window[3], modes[3], relative_base)
+    grow_memory!(positions, write_index+1)
+    positions[write_index+1] = (values[1] < values[2] ? 1 : 0)
 end
 
 function opcode_8(positions, window, modes, relative_base)
-    """Write 1 if first parameter is equal to second, otherwise write zero."""
+    """Write 1 to third parameter if first parameter is equal to second, otherwise write zero."""
     values = determine_values(positions, window, modes, relative_base)
-    positions[window[3]+1] = (values[1] == values[2] ? 1 : 0)
+    write_index = determine_write_position(window[3], modes[3], relative_base)
+    grow_memory!(positions, write_index+1)
+    positions[write_index+1] = (values[1] == values[2] ? 1 : 0)
 end
 
 function opcode_9(positions, window, modes, relative_base)
     """Adjusts relative base by the value of the first parameter."""
+    values = determine_values(positions, window, modes, relative_base)
     return relative_base + values[1]
 end
 
