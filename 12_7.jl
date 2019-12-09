@@ -213,7 +213,7 @@ function main1()
 end
 
 function main2()
-   input_file = joinpath(pwd(), "files", "12_7_input.txt")
+    input_file = joinpath(pwd(), "files", "12_7_input.txt")
     input = read(open(input_file, "r"), String)
     intcode = chomp(input)
 
@@ -249,7 +249,7 @@ function main2()
             end
             # Update this particular amplifier
             # amp.positions is updated in 'process_intcode' by reference
-            
+
             amp.curr_idx = curr_idx
         end
         max_output_signal = max(max_output_signal, stored_value)
