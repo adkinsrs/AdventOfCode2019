@@ -1,11 +1,17 @@
-# The purpose of this module is to house reusable code pieces.  If I performed a process many times in the past, there is a good chance it will be included here
+# Functions related to the intcode computer
 
-module Common
+module Intcode
 export process_intcode
 
 POSITION_MODE = 0   # Parameter is a memory address
+# Read - value = mem[pos]
+# Write - mem[pos] = values
 IMMEDIATE_MODE = 1  # Parameters is the value itself
+# Read - value = pos
+# Write - NA
 RELATIVE_MODE = 2   # Parameter's memory address is adjusted based on a stored relative base
+# Read - value = mem[pos + base]
+# Write - mem[pos + base] = value
 
 function determine_values(positions, window, modes, relative_base)
     """Returns list of values, depending on mode for the particular parameter."""

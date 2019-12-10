@@ -5,8 +5,8 @@ https://adventofcode.com/2019/day/9
 """
 
 # Since it's a local module, it must be found with 'include' first
-include("Common.jl")
-using .Common
+include("Intcode.jl")
+using .Intcode
 
 # Builds off of the intcode compiler from Day 7
 function main1()

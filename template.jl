@@ -1,8 +1,8 @@
 #!/usr/bin/env julia
 
 # Since it's a local module, it must be found with 'include' first
-include("Common.jl")
-using .Common
+include("Intcode.jl")
+using .Intcode
 
 function main1()
     # Getting curl 400 error so downloading file beforehand
