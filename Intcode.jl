@@ -58,7 +58,7 @@ function normalize_modes!(modes, window)
     end
 end
 
-function process_intcode(positions, input, curr_idx=1)
+function process_intcode(positions, input, curr_idx=1; return4=false)
     """Loop through intcode instructions, resolving any opcodes encountered."""
     #TODO: eventually use the OffsetArrays package to 0-index the positions array to be accurate with
     # memory address positions read in from the intcode
@@ -70,6 +70,8 @@ function process_intcode(positions, input, curr_idx=1)
         opcode = mod(instructions, 100)
         # Divide to remove the opcode, the store individual digits right-to-left in array
         modes = digits(div(instructions, 100))
+
+        @show positions[curr_idx:curr_idx+3]
 
         # Handle the various opcodes
         if opcode == 1
@@ -96,6 +98,7 @@ function process_intcode(positions, input, curr_idx=1)
             window = positions[curr_idx+1]
             input = opcode_4(positions, window, modes, relative_base)
             curr_idx += 2
+            return4 && return (input, curr_idx)
         elseif opcode == 5
             try
                 window = positions[curr_idx+1:curr_idx+2]
@@ -135,7 +138,7 @@ function process_intcode(positions, input, curr_idx=1)
             relative_base = opcode_9(positions, window, modes, relative_base)
             curr_idx += 2
         elseif opcode == 99
-            return input
+            return input, curr_idx
             #return opcode_99(positions)
         end
     end

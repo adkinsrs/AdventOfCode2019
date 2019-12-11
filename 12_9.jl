@@ -23,7 +23,7 @@ function main1()
 
     INITIAL_INPUT = 1
     #output = process_intcode(positions, nothing) # Test code takes no input
-    output = process_intcode(positions, INITIAL_INPUT)
+    (output, index) = process_intcode(positions, INITIAL_INPUT)
 
     println("Part 1 Answer:")
     @show output
@@ -43,7 +43,7 @@ function main2()
 
     INITIAL_INPUT = 2
     #output = process_intcode(positions, nothing) # Test code takes no input
-    output = process_intcode(positions, INITIAL_INPUT)
+    (output, index) = process_intcode(positions, INITIAL_INPUT)
 
     println("Part 1 Answer:")
     @show output
