@@ -27,17 +27,24 @@ function calculate_slope(x::Int, y::Int)
 end
 
 function get_quadrant(x::Int, y::Int)
-    if x < 0
-        if y < 0
-            return NEGX_NEGY
-        end
-        return NEGX_POSY
-    end
 
-    if y < 0
-        return POSX_NEGY
-    end
-    return POSX_POSY
+    # NOTE:
+    # If slope is 0 (y = 0) and x is positive, it will go in Quadrant 1
+    # If slope is Inf (x = 0) and y is negative, it will go in Quadrant 2
+    # If slope is 0 (y = 0) and x is negative, it will go in Quadrant 3
+    # If slope is Inf (x = 0) and y is positive, it will go in Quadrant 4
+
+    # Original coordinates have origin at top-left
+    # 'x' and 'y' are relative coords to a point of origin (i.e. monitoring_location)
+
+    # Quadrant 1 (up/right)
+    x > 0 && y >= 0 && return POSX_POSY
+    # Quadrant 2 (down/right)
+    x >= 0 && y < 0 && return POSX_NEGY
+    # Quadrant 3 (down/left)
+    x < 0 && y <= 0 && return NEGX_NEGY
+    # Quadrant 4 (up/left)
+    x <= 0 && y > 0 && return NEGX_POSY
 end
 
 function is_asteroid(char::Char)
@@ -92,20 +99,20 @@ function main1()
             get!(slopes, slope, Set{Int}())
 
             # Two asteroids can be in the same line from the current asteroid, but in different directions
-            # x and y coordinates at 0 will be considered positive integers
-            if x < 0
-                if y <= 0
-                    push!(slopes[slope], NEGX_NEGY) # want to ensure (-0 y-axis) goes to quadrant 3 to avoid potential logic issues later
-                else
-                    push!(slopes[slope], NEGX_POSY)
-                end
-            else
-                if y < 0
-                    push!(slopes[slope], POSX_NEGY)
-                else
-                    push!(slopes[slope], POSX_POSY)
-                end
-            end
+            # If slope is 0 (y = 0) and x is positive, it will go in Quadrant 1
+            # If slope is Inf (x = 0) and y is negative, it will go in Quadrant 2
+            # If slope is 0 (y = 0) and x is negative, it will go in Quadrant 3
+            # If slope is Inf (x = 0) and y is positive, it will go in Quadrant 4
+
+            # Quadrant 1
+            x > 0 && y >= 0 && push!(slopes[slope], POSX_POSY)
+            # Quadrant 2
+            x >= 0 && y < 0 && push!(slopes[slope], POSX_NEGY)
+            # Quadrant 3
+            x < 0 && y <= 0 && push!(slopes[slope], NEGX_NEGY)
+            # Quadrant 4
+            x <= 0 && y > 0 && push!(slopes[slope], NEGX_POSY)
+
         end
         #@show slopes
         visible_asteroids = sum(length(slopes[slope]) for slope in keys(slopes))
@@ -140,7 +147,8 @@ function main2(monitoring_location::Point)
 
     # Look at positions relative to our monitoring station (new origin point)
     for pos in asteroid_positions
-        relative_x = monitoring_location.x - pos.x
+        # Since original origin is top-left, invert the y offset
+        relative_x = pos.x - monitoring_location.x
         relative_y = monitoring_location.y - pos.y
         # skip position of monitoring station
         relative_x == 0 && relative_y == 0 && continue
@@ -152,9 +160,8 @@ function main2(monitoring_location::Point)
 
         # Add slope to set of slopes, which will be cycled over as the laser moves
         push!(slopes, slope)
-        distance = manhattan_distance(monitoring_location, relative_x, relative_y)
+        distance = manhattan_distance(monitoring_location, pos.x, pos.y)
         quadrant = get_quadrant(relative_x, relative_y)
-
         asteroid_info[pos] = Dict("slope" => slope, "distance" => distance, "quadrant" => quadrant)
     end
 
@@ -168,8 +175,6 @@ function main2(monitoring_location::Point)
     quadrants = circshift(QUADRANTS, 1)    # Rotate away from front so first iteration will start with quadrant 1 (pos-X, pos-Y)
     for slope in Iterators.cycle(sorted_slopes)
         quadrant = quadrants[1]
-        @show slope, quadrant
-
         # slope is current laser's path. Get all asteroids in that path
         asteroids_in_path = collect(filter(x -> asteroid_info[x]["quadrant"] == quadrant && asteroid_info[x]["slope"] == slope, keys(asteroid_info)))
         length(asteroids_in_path) > 0 || continue
@@ -179,9 +184,8 @@ function main2(monitoring_location::Point)
 
         num_asteroids_destroyed +=1
         pop!(asteroid_info, last_asteroid)
-        @show slope
-        @show last_asteroid
-        @show num_asteroids_destroyed
+        #@show slope, quadrant, num_asteroids_destroyed
+        #@show last_asteroid
         if num_asteroids_destroyed == 200
             break
         end
