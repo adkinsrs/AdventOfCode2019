@@ -85,32 +85,36 @@ function main1()
 
     intcode_idx = 1
     current_direction = UP
-    steps = 0
+
+    ic = IntcodeComputer(copy(positions), panels[current_panel])
     # Two outputs
     # 1) color to paint current panel
     # 2) which direction to turn robot (always move forward 1-space afterwards)
-    #while intcode_idx != -1
-    while steps < 20
+    while intcode_idx != -1
         panel_color = panels[current_panel]
         # Determine what color to paint the panel
-        panels[current_panel], intcode_idx = process_intcode(positions, panel_color, intcode_idx, return4=true)
-        @show panels[current_panel], intcode_idx
+        panels[current_panel], intcode_idx, relative_base = process_intcode(ic)
+        if intcode_idx == -1
+            break
+        end
+
         # Store how many panels have been painted over at least once
         push!(panels_painted, current_panel)
 
+        # Update computer with current state
+        update_computer!(ic, intcode_idx, panel_color, relative_base)
+
         # Determine which direction to rotate the robot in
-        turn_direction, intcode_idx = process_intcode(positions, panel_color, intcode_idx; return4=true)
+        turn_direction, intcode_idx, relative_base = process_intcode(ic)
         # Move the robot based on the current direction its facing
         current_direction = direction_after_turn(current_direction, turn_direction)
-        @show turn_direction, intcode_idx, current_direction
+
         current_point = move(current_panel, current_direction)
         current_panel = point_to_string(current_point)
-        @show current_panel
-        get!(panels, current_panel, BLACK)  # Return new point or assign it to black
-        steps +=1
-        @show ""
+
+        panel_color = get!(panels, current_panel, BLACK)  # Return new point or assign it to black
+        update_computer!(ic, intcode_idx, panel_color, relative_base)
     end
-    @show panels
 
     println("Part 1 Answer:")
     @show length(collect(panels_painted))
