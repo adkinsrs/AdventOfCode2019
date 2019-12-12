@@ -198,7 +198,7 @@ function main2()
             char == '0' && printstyled(char, color=:black)
             char == '1' && printstyled(char, bold=true, color=:white)
         end
-        print("\n")        
+        print("\n")
     end
 end
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env julia
 
+"""
+https://adventofcode.com/2019/day/12
+"""
+
 using Combinatorics
 
 mutable struct Point
@@ -27,8 +31,57 @@ function kinetic_energy(moon)
 
 end
 
+function match_previous_state(initial_state, moon_positions, moon_velocities)
+    # Since objects in previous states are different object IDs, a simple "if state in states" will not work
+    match = true
+
+    # Break up the "states" tuples into their individual parts
+    init_positions = initial_state[1]
+    init_velocities = initial_state[2]
+    #prev_moon_positions = map(x -> x[1], states)
+    #prev_moon_velocities = map(x -> x[2], states)
+    #matching_indexes = collect(1:length(prev_moon_positions))   # Keeps track of all indexes where state continues to match across criteria
+    for i in 1:length(moon_positions)
+        # Position and velocity for each individual moon.  Serialize the x,y,z coords into a list.
+        moon_pos = to_array(moon_positions[i])
+        moon_vel = to_array(moon_velocities[i])
+        init_moon_pos = to_array(init_positions[i])
+        init_moon_vel = to_array(init_velocities[i])
+
+        (moon_pos == init_moon_pos && moon_vel == init_moon_vel) || return false
+        #ith_moon_pos= map(moons -> to_array(moons[i]), prev_moon_positions)
+        #ith_moon_vel = map(moons -> to_array(moons[i]), prev_moon_velocities)
+
+        # Find all indexes for the ith moon where the coordinates match the current state
+        # If number of potential index matches ever hits zero, then the state is unique
+        #pos_matches = findall(pos -> pos == moon_pos, ith_moon_pos)
+        #vel_matches = findall(vel -> vel == moon_vel, ith_moon_vel)
+        #intersect!(matching_indexes, pos_matches, vel_matches)
+        #length(matching_indexes) > 0 || return false
+    end
+    # If all 4 moons end have matching positions and velocities with a previous state there should be a single matching index
+    #@show matching_indexes
+    return match
+end
+
+function parse_coordinates(line)
+    m = match(r"x=(-?\d+), y=(-?\d+), z=(-?\d+)", line)
+    x = parse(Int, m.captures[1])
+    y = parse(Int, m.captures[2])
+    z = parse(Int, m.captures[3])
+    return Point(x, y, z)
+end
+
 function potential_energy(moon)
     return abs(moon.x) + abs(moon.y) + abs(moon.z)
+end
+
+function to_array(point::Point)
+    return [point.x, point.y, point.z]
+end
+
+function to_array(velo::Velocity)
+    return [velo.x, velo.y, velo.z]
 end
 
 function total_energy(position, velocity)
@@ -75,14 +128,6 @@ function update_velocities!(moon_velocities, moon_positions)
     end
 end
 
-function parse_coordinates(line)
-    m = match(r"x=(-?\d+), y=(-?\d+), z=(-?\d+)", line)
-    x = parse(Int, m.captures[1])
-    y = parse(Int, m.captures[2])
-    z = parse(Int, m.captures[3])
-    return Point(x, y, z)
-end
-
 function main1()
     # Getting curl 400 error so downloading file beforehand
     #input_file = download("https://adventofcode.com/2019/day/1/input")
@@ -111,7 +156,34 @@ function main1()
 end
 
 function main2()
-    nothing
+    input_file = joinpath(pwd(), "files", "12_12_test1.txt")
+    lines = readlines(open(input_file, "r"))
+    lines = map(x -> chomp(x), lines)
+
+    # Initial moon positions and velocities
+    moon_positions = Point[]
+    moon_velocities = Velocity[]
+    [push!(moon_positions, parse_coordinates(line)) for line in lines]
+    [push!(moon_velocities, Velocity(0,0,0)) for line in lines]
+
+    # Need to deepcopy as 'copy' will copy reference pointers beyond the first depth
+    # Only checking against the initial state assumes the first encountered state is due to a completed orbit (period)
+    initial_state = (deepcopy(moon_positions), deepcopy(moon_velocities))
+    t = 0
+    while true
+        t += 1
+        # Update velocity by applying gravity
+        update_velocities!(moon_velocities, moon_positions)
+        # Update position by applying velocity
+        update_positions!(moon_positions, moon_velocities)
+        match_previous_state(initial_state, moon_positions, moon_velocities) && break
+        #push!(states, (deepcopy(moon_positions), deepcopy(moon_velocities)))
+    end
+
+    #@show states
+
+    println("Part 2 Answer:")
+    @show t
 end
 
 # What is the total energy in the system after simulating the moons given in your scan for 1000 steps?
