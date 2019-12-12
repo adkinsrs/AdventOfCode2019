@@ -31,33 +31,6 @@ function kinetic_energy(moon)
 
 end
 
-function match_previous_state(states, moon_positions, moon_velocities)
-    # Since objects in previous states are different object IDs, a simple "if state in states" will not work
-    match = true
-
-    # Break up the "states" tuples into their individual parts
-    prev_moon_positions = map(x -> x[1], states)
-    prev_moon_velocities = map(x -> x[2], states)
-    matching_indexes = collect(1:length(prev_moon_positions))   # Keeps track of all indexes where state continues to match across criteria
-    for i in 1:length(moon_positions)
-        # Position and velocity for each individual moon.  Serialize the x,y,z coords into a list.
-        moon_pos = to_array(moon_positions[i])
-        moon_vel = to_array(moon_velocities[i])
-        ith_moon_pos= map(moons -> to_array(moons[i]), prev_moon_positions)
-        ith_moon_vel = map(moons -> to_array(moons[i]), prev_moon_velocities)
-
-        # Find all indexes for the ith moon where the coordinates match the current state
-        # If number of potential index matches ever hits zero, then the state is unique
-        pos_matches = findall(pos -> pos == moon_pos, ith_moon_pos)
-        vel_matches = findall(vel -> vel == moon_vel, ith_moon_vel)
-        intersect!(matching_indexes, pos_matches, vel_matches)
-        length(matching_indexes) > 0 || return false
-    end
-    # If all 4 moons end have matching positions and velocities with a previous state,
-    # there should be a single matching index
-    return match
-end
-
 function parse_coordinates(line)
     m = match(r"x=(-?\d+), y=(-?\d+), z=(-?\d+)", line)
     x = parse(Int, m.captures[1])
@@ -157,7 +130,8 @@ function main2()
     # i cheated and lookat at the Advent of Code subreddit for a hint
     # The cycle for each moon's axis can be independently determined
     # The least common multiple of all these cycles is the answer
-    least_common_multiple = zeros(Int,4)
+    #least_common_multiple = zeros(Int,4)
+    least_common_multiple = zeros(Int, 3)
 
     # Initial moon positions and velocities
     moon_positions = Point[]
@@ -171,20 +145,25 @@ function main2()
 
     t = 0
     while true
-        t += 1
         # Update velocity by applying gravity
         update_velocities!(moon_velocities, moon_positions)
         # Update position by applying velocity
         update_positions!(moon_positions, moon_velocities)
 
+        t += 1
+
         # Compare moon positions until cycle has been found
-        for i in 1:length(moon_positions)
-            # cycle has been found for this moon
-            if least_common_multiple[i] > 0
-                continue
-            end
-            if to_array(moon_positions[i]) == to_array(init_positions[i]) && to_array(moon_velocities[i]) == [0,0,0]
-                least_common_multiple[i] = t
+        # More AoC subreddit cheating... only need to compare just one axis for each moon
+        for i in 1:3
+            init_moon = map(moon -> to_array(moon)[i], init_positions)
+            curr_moon = map(moon -> to_array(moon)[i], moon_positions)
+            moon_vel = map(moon -> to_array(moon)[i], moon_velocities)
+
+            if least_common_multiple[i] == 0
+                # If cycle has been found but not recorded, record it
+                if init_moon == curr_moon && moon_vel == [0,0,0,0]
+                    least_common_multiple[i] = t
+                end
             end
         end
 
