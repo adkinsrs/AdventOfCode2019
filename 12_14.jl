@@ -4,14 +4,20 @@
 https://adventofcode.com/2019/day/14
 """
 
+function amount_to_increase(created, consumed )
+    """ Determine amount to increase product requirements by for a reactant."""
+    return max(created, consumed)
+end
+
 function calculate_requirements!(requirements, reactions, product)
     """Recursively calculate the number required to make FUEL for each reactant."""
     product == "ORE" && return
     # Create intermediate requirements dictionary for current product
     reactants = map(x -> x.reactant, reactions[product]["inputs"])
 
-    [requirements[input.reactant] += input.quantity for input in reactions[product]["inputs"]]
+    [requirements[input.reactant] += amount_to_increase(reactions[input]["quantity"], input.quantity) for input in reactions[product]["inputs"]]
     @show product, reactions[product]["quantity"], reactions[product]["inputs"]
+
     [calculate_requirements!(requirements, reactions, input.reactant) for input in reactions[product]["inputs"]]
     @show requirements
     @show ""
